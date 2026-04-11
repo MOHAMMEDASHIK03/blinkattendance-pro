@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import CameraFeed from '@/components/CameraFeed';
+import AttendanceDashboard from '@/components/AttendanceDashboard';
 import Navbar from '@/components/Navbar';
 
-const Index = () => {
+const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -13,16 +13,16 @@ const Index = () => {
           className="text-center mb-10"
         >
           <h1 className="font-heading text-4xl font-bold text-foreground mb-3">
-            Blink to Mark Attendance
+            Admin Dashboard
           </h1>
           <p className="text-muted-foreground max-w-md mx-auto">
-            Face the camera and blink your eyes twice. Your identity will be verified instantly.
+            Monitor attendance records and manage registered users.
           </p>
         </motion.div>
-        <CameraFeed />
+        <AttendanceDashboard />
       </main>
     </div>
   );
 };
 
-export default Index;
+export default Dashboard;
