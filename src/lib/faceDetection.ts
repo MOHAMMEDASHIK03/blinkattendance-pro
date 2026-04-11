@@ -39,13 +39,17 @@ function distance(p1: faceapi.Point, p2: faceapi.Point) {
   return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
 }
 
+export async function detectFaceWithLandmarks(video: HTMLVideoElement) {
+  return await faceapi
+    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
+    .withFaceLandmarks(true); // true = use tiny model
+}
+
 export async function detectFaceWithDescriptor(video: HTMLVideoElement) {
-  const detection = await faceapi
-    .detectSingleFace(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+  return await faceapi
+    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
     .withFaceLandmarks()
     .withFaceDescriptor();
-  
-  return detection;
 }
 
 export function compareFaces(descriptor1: Float32Array, descriptor2: number[]): number {
