@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Eye, UserPlus, LayoutDashboard } from 'lucide-react';
+import { Eye, UserPlus, Lock } from 'lucide-react';
 
 const Navbar = () => {
   const location = useLocation();
@@ -7,7 +7,7 @@ const Navbar = () => {
   const links = [
     { to: '/', label: 'Attendance', icon: Eye },
     { to: '/register', label: 'Register', icon: UserPlus },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/admin', label: 'Admin', icon: Lock },
   ];
 
   return (
@@ -26,7 +26,7 @@ const Navbar = () => {
                 key={to}
                 to={to}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  location.pathname === to
+                  location.pathname === to || (to === '/admin' && location.pathname === '/dashboard')
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                 }`}
