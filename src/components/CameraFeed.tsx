@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Eye, EyeOff, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Camera, Eye, EyeOff, CheckCircle2, XCircle, Loader2, Hand } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { loadModels, detectFaceWithLandmarks, detectFaceWithDescriptor, getEyeAspectRatio, compareFaces, BLINK_THRESHOLD, MATCH_THRESHOLD } from '@/lib/faceDetection';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -14,12 +15,12 @@ const CameraFeed = () => {
   const [matchedUser, setMatchedUser] = useState<string | null>(null);
   const [eyesClosed, setEyesClosed] = useState(false);
   const wasClosedRef = useRef(false);
+  const closedFramesRef = useRef(0);
   const processingRef = useRef(false);
   const matchingRef = useRef(false);
   const animationRef = useRef<number>(0);
   const statusRef = useRef<Status>('loading');
 
-  // Keep statusRef in sync
   useEffect(() => { statusRef.current = status; }, [status]);
 
   useEffect(() => {
@@ -36,7 +37,7 @@ const CameraFeed = () => {
           await videoRef.current.play();
         }
         setStatus('ready');
-        setMessage('Position your face and blink to mark attendance');
+        setMessage('Blink your eyes or tap the button to mark attendance');
         startDetectionLoop();
       } catch (err) {
         setMessage('Camera access denied or models failed to load');
@@ -55,10 +56,9 @@ const CameraFeed = () => {
     if (!videoRef.current || matchingRef.current) return;
     matchingRef.current = true;
     setStatus('blink_detected');
-    setMessage('Blink detected! Checking identity...');
+    setMessage('Checking identity...');
 
     try {
-      // Now do the heavier descriptor detection for matching
       const detection = await detectFaceWithDescriptor(videoRef.current);
       if (!detection) {
         setStatus('not_found');
@@ -132,21 +132,29 @@ const CameraFeed = () => {
   const resetAfterDelay = () => {
     setTimeout(() => {
       setStatus('ready');
-      setMessage('Position your face and blink to mark attendance');
+      setMessage('Blink your eyes or tap the button to mark attendance');
       setMatchedUser(null);
       wasClosedRef.current = false;
+      closedFramesRef.current = 0;
     }, 4000);
   };
 
   const startDetectionLoop = () => {
+    let frameSkip = 0;
     const loop = async () => {
       if (!videoRef.current || processingRef.current) {
         animationRef.current = requestAnimationFrame(loop);
         return;
       }
 
-      // Skip detection if we're matching or showing results
       if (statusRef.current !== 'ready') {
+        animationRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
+      // Process every 3rd frame for performance
+      frameSkip++;
+      if (frameSkip % 3 !== 0) {
         animationRef.current = requestAnimationFrame(loop);
         return;
       }
@@ -154,7 +162,6 @@ const CameraFeed = () => {
       processingRef.current = true;
 
       try {
-        // Use fast tiny detector for blink detection only
         const detection = await detectFaceWithLandmarks(videoRef.current);
 
         if (detection) {
@@ -162,12 +169,19 @@ const CameraFeed = () => {
           const isClosed = ear < BLINK_THRESHOLD;
           setEyesClosed(isClosed);
 
-          if (isClosed && !wasClosedRef.current) {
-            wasClosedRef.current = true;
-          } else if (!isClosed && wasClosedRef.current) {
-            wasClosedRef.current = false;
-            // Single blink triggers match
-            matchFace();
+          if (isClosed) {
+            closedFramesRef.current++;
+            if (!wasClosedRef.current && closedFramesRef.current >= 1) {
+              wasClosedRef.current = true;
+            }
+          } else {
+            if (wasClosedRef.current) {
+              // Eyes opened after being closed = blink detected
+              wasClosedRef.current = false;
+              closedFramesRef.current = 0;
+              matchFace();
+            }
+            closedFramesRef.current = 0;
           }
         }
       } catch (err) {
@@ -179,6 +193,12 @@ const CameraFeed = () => {
     };
 
     animationRef.current = requestAnimationFrame(loop);
+  };
+
+  const handleManualCapture = () => {
+    if (statusRef.current === 'ready' && !matchingRef.current) {
+      matchFace();
+    }
   };
 
   const statusIcon = {
@@ -271,9 +291,15 @@ const CameraFeed = () => {
       </motion.div>
 
       {status === 'ready' && (
-        <p className="text-muted-foreground text-sm text-center max-w-md">
-          Blink your eyes to mark attendance. Make sure your face is clearly visible.
-        </p>
+        <div className="flex flex-col items-center gap-3">
+          <Button onClick={handleManualCapture} size="lg" variant="outline" className="gap-2">
+            <Hand className="w-5 h-5" />
+            Mark Attendance Manually
+          </Button>
+          <p className="text-muted-foreground text-sm text-center max-w-md">
+            Blink your eyes or tap the button above. Make sure your face is clearly visible.
+          </p>
+        </div>
       )}
     </div>
   );
