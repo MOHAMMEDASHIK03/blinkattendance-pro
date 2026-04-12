@@ -41,15 +41,24 @@ function distance(p1: faceapi.Point, p2: faceapi.Point) {
 
 export async function detectFaceWithLandmarks(video: HTMLVideoElement) {
   return await faceapi
-    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
-    .withFaceLandmarks(true); // true = use tiny model
+    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.3 }))
+    .withFaceLandmarks(true);
 }
 
 export async function detectFaceWithDescriptor(video: HTMLVideoElement) {
-  return await faceapi
-    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
+  // Try SSD first for better accuracy, fall back to tiny
+  let result = await faceapi
+    .detectSingleFace(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
     .withFaceLandmarks()
     .withFaceDescriptor();
+  
+  if (!result) {
+    result = await faceapi
+      .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.3 }))
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+  }
+  return result;
 }
 
 export function compareFaces(descriptor1: Float32Array, descriptor2: number[]): number {
@@ -57,5 +66,5 @@ export function compareFaces(descriptor1: Float32Array, descriptor2: number[]): 
   return faceapi.euclideanDistance(descriptor1, d2);
 }
 
-export const BLINK_THRESHOLD = 0.21;
-export const MATCH_THRESHOLD = 0.55;
+export const BLINK_THRESHOLD = 0.26;
+export const MATCH_THRESHOLD = 0.6;
